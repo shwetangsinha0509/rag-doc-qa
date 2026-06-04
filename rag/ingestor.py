@@ -11,8 +11,6 @@ load_dotenv()
 
 CHROMA_DIR = "chroma_store"
 
-# Same model as before, now through LangChain's universal embedding interface
-# Swapping to OpenAI/Cohere embeddings later = one line change
 _embeddings = None
 
 def get_embeddings():
@@ -37,22 +35,15 @@ def ingest_pdf(file_path: str, collection_name: str) -> int:
     Returns chunk count.
     """
 
-    # Step 1: Load — returns list of Document objects, one per page
-    # Each Document has .page_content and .metadata (page number, source path)
     loader = PyPDFLoader(file_path)
     documents = loader.load()
 
-    # Step 2: Split — smarter than our manual word splitter
-    # Tries to split on: paragraphs → sentences → words → characters
-    # chunk_size is in characters (1000) not words (500) — closer to how LLMs count tokens
-    # Metadata from each Document is preserved in every chunk automatically
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=100
     )
     chunks = splitter.split_documents(documents)
 
-    # Step 3: Embed + store — replaces manual collection.add() + ID generation
     Chroma.from_documents(
         documents=chunks,
         embedding=get_embeddings(),
